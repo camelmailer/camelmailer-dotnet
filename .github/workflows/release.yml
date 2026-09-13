@@ -4,6 +4,12 @@ on:
   push:
     tags: ["v*"]
 
+permissions:
+  contents: read
+  # The run's OIDC identity is the credential: NuGet trusts this repository
+  # and this workflow file, and hands back a short-lived API key.
+  id-token: write
+
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -21,27 +27,36 @@ jobs:
       - name: Test
         run: dotnet test --no-build --configuration Release
 
+      - name: Refuse a tag that disagrees with the package version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          version="$(sed -n 's|.*<Version>\(.*\)</Version>.*|\1|p' src/CamelMailer/CamelMailer.csproj)"
+          if [ "$tag" != "$version" ]; then
+            echo "tag $GITHUB_REF_NAME does not match <Version> $version" >&2
+            exit 1
+          fi
+
       - name: Pack
         run: dotnet pack src/CamelMailer/CamelMailer.csproj --no-build --configuration Release --output artifacts
 
-      - name: Check for NuGet API key
-        id: token
-        env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+      - name: Check the NuGet account name is configured
         run: |
-          if [ -n "$NUGET_API_KEY" ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "NUGET_API_KEY secret is not set - skipping the publish step."
+          if [ -z "${{ vars.NUGET_USER }}" ]; then
+            echo "The repository variable NUGET_USER is not set. It is the" >&2
+            echo "NuGet.org account that owns the trusted publisher policy:" >&2
+            echo "  gh variable set NUGET_USER -R $GITHUB_REPOSITORY --body '<account>'" >&2
+            exit 1
           fi
 
+      - name: Authenticate with NuGet
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ vars.NUGET_USER }}
+
       - name: Publish to NuGet
-        if: steps.token.outputs.present == 'true'
-        env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
         run: >
           dotnet nuget push "artifacts/*.nupkg"
-          --api-key "$NUGET_API_KEY"
+          --api-key "${{ steps.login.outputs.NUGET_API_KEY }}"
           --source https://api.nuget.org/v3/index.json
           --skip-duplicate
