@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping improve the CamelMailer .NET SDK!
+Thanks for helping improve the Camelmailer .NET SDK!
 
 ## Development setup
 

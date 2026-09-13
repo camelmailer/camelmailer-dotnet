@@ -1,10 +1,10 @@
-# CamelMailer .NET SDK
+# Camelmailer .NET SDK
 
 [![CI](https://github.com/camelmailer/camelmailer-dotnet/actions/workflows/ci.yml/badge.svg)](https://github.com/camelmailer/camelmailer-dotnet/actions/workflows/ci.yml)
 [![NuGet](https://img.shields.io/nuget/v/CamelMailer.svg)](https://www.nuget.org/packages/CamelMailer)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-The official .NET SDK for [CamelMailer](https://camelmailer.com) — the
+The official .NET SDK for [Camelmailer](https://camelmailer.com) — the
 open-source transactional email platform.
 
 ## Install
@@ -176,7 +176,7 @@ catch (CamelMailerException ex)
 
 ## Self-hosted instances
 
-The client talks to the CamelMailer cloud (`https://app.camelmailer.com`)
+The client talks to the Camelmailer cloud (`https://app.camelmailer.com`)
 by default. Point it at your own installation:
 
 ```csharp
