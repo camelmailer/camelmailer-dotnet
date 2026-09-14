@@ -38,6 +38,21 @@ internal sealed class ApiConnection
     internal Task<T> PostAsync<T>(string path, object? body, CancellationToken cancellationToken)
         => SendAsync<T>(HttpMethod.Post, path, query: null, body, cancellationToken);
 
+    /// <summary>
+    /// POSTs with an <c>Idempotency-Key</c>. The key is a header rather than a
+    /// body field, because the body is what the server hashes to recognise the
+    /// same request.
+    /// </summary>
+    internal Task<T> PostAsync<T>(
+        string path,
+        object? body,
+        string? idempotencyKey,
+        CancellationToken cancellationToken)
+        => SendAsync<T>(HttpMethod.Post, path, query: null, body, cancellationToken, idempotencyKey);
+
+    internal Task<T> DeleteAsync<T>(string path, CancellationToken cancellationToken)
+        => SendAsync<T>(HttpMethod.Delete, path, query: null, body: null, cancellationToken);
+
     internal Task<T> PatchAsync<T>(string path, object? body, CancellationToken cancellationToken)
         => SendAsync<T>(HttpMethod.Patch, path, query: null, body, cancellationToken);
 
@@ -50,11 +65,16 @@ internal sealed class ApiConnection
         string path,
         IReadOnlyCollection<KeyValuePair<string, string>>? query,
         object? body,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? idempotencyKey = null)
     {
         using var request = new HttpRequestMessage(method, BuildUrl(path, query));
         request.Headers.Add("X-Server-API-Key", _apiKey);
         request.Headers.Accept.ParseAdd("application/json");
+        if (!string.IsNullOrEmpty(idempotencyKey))
+        {
+            request.Headers.Add("Idempotency-Key", idempotencyKey);
+        }
         if (body is not null)
         {
             request.Content = new StringContent(

@@ -90,6 +90,21 @@ await camelmailer.Emails.SendWithTemplateAsync(new SendTemplateEmailRequest
     TemplateModel = new Dictionary<string, object?> { ["name"] = "Ada" },
 });
 
+// Retry-safe sends: the same key with the same body returns the first result
+// instead of queuing a second copy, and a different body under the same key is
+// refused with InvalidIdempotentRequest. All four send methods take one.
+await camelmailer.Emails.SendAsync(request, idempotencyKey: $"order-{orderId}");
+
+// Broadcast to everyone subscribed to a stream. Recipients past the
+// per-request cap of 1000 come back as Skipped, so a larger audience wants a
+// campaign.
+var broadcast = await camelmailer.Emails.SendToStreamAsync("newsletter", new SendToStreamRequest
+{
+    From = "news@acme.com",
+    Subject = "September",
+    TextBody = "What shipped this month.",
+});
+
 // Inspect messages
 var page = await camelmailer.Emails.ListAsync(new ListEmailsOptions { Tag = "invoice" });
 var details = await camelmailer.Emails.GetAsync(page.Messages[0].Id);
@@ -122,6 +137,7 @@ await camelmailer.Templates.ArchiveAsync(template.Permalink!);
 var stream = await camelmailer.Streams.CreateAsync(new CreateStreamRequest
 {
     Name = "Broadcasts",
+    Permalink = "broadcasts",   // the API derives one from the name when unset
     StreamType = "broadcast",
 });
 
@@ -133,6 +149,102 @@ await camelmailer.Emails.SendAsync(new SendEmailRequest
     TextBody = "...",
     Stream = stream.Permalink,
 });
+```
+
+## Campaigns
+
+A campaign is content plus an audience. The two ways to create one behave
+differently, so pick deliberately: `CreateDraftAsync` writes it and waits,
+`CreateAndSendAsync` expands it to the stream's subscribers before the call
+returns.
+
+```csharp
+// Write it and leave it alone. Without a schedule it stays a draft; with one
+// it becomes "scheduled" and the server sends it when due.
+var draft = await camelmailer.Campaigns.CreateDraftAsync(new CreateDraftCampaignRequest
+{
+    Stream = "newsletter",
+    From = "news@acme.com",
+    Name = "September",
+    Subject = "What shipped",
+    TextBody = "Hello.",
+    // ScheduledAt = DateTimeOffset.Parse("2026-10-01T08:00:00Z"),
+});
+
+// Goes out on the spot, no draft and no schedule.
+await camelmailer.Campaigns.CreateAndSendAsync("newsletter", new CreateAndSendCampaignRequest
+{
+    Name = "Status update",
+    From = "news@acme.com",
+    TextBody = "All clear.",
+});
+
+var detail = await camelmailer.Campaigns.GetAsync(draft.Id);   // campaign + stats
+
+// ScheduledAt schedules; ClearSchedule drops it back to a draft. Setting
+// neither leaves the schedule standing, so the two are separate.
+await camelmailer.Campaigns.UpdateAsync(draft.Id, new UpdateCampaignRequest
+{
+    ScheduledAt = DateTimeOffset.Parse("2026-10-01T08:00:00Z"),
+});
+await camelmailer.Campaigns.UpdateAsync(draft.Id, new UpdateCampaignRequest
+{
+    ClearSchedule = true,
+});
+
+await camelmailer.Campaigns.SendAsync(draft.Id);     // now, whatever the schedule said
+await camelmailer.Campaigns.CancelAsync(draft.Id);
+```
+
+## Subscribers
+
+A broadcast send to an address that is not subscribed is refused, so this list
+is the audience.
+
+```csharp
+await camelmailer.Subscribers.ListAsync("newsletter");
+await camelmailer.Subscribers.AddAsync("newsletter", new AddSubscriberRequest
+{
+    Address = "ada@example.com",
+    Name = "Ada",
+});
+await camelmailer.Subscribers.ImportAsync("newsletter", ["ada@example.com", "grace@example.com"]);
+await camelmailer.Subscribers.ComplaintAsync("newsletter", "ada@example.com");  // suppress + unsubscribe
+await camelmailer.Subscribers.RemoveAsync("newsletter", "ada@example.com");
+```
+
+## Layouts
+
+A layout wraps every template that uses it. `HtmlWrapper` has to embed the body
+with `{{{ content }}}`.
+
+```csharp
+await camelmailer.Layouts.CreateAsync(new CreateLayoutRequest
+{
+    Name = "Default",
+    Permalink = "default",
+    HtmlWrapper = "<html><body>{{{ content }}}</body></html>",
+});
+var logo = await camelmailer.Layouts.UploadLogoAsync("default", "data:image/png;base64,...");
+await camelmailer.Layouts.DeleteAsync("default");
+```
+
+## Inbound and held messages
+
+```csharp
+var held = await camelmailer.Inbound.ListAsync(new ListInboundOptions { Status = "held" });
+await camelmailer.Inbound.RetryAsync(55);    // back on the delivery queue
+await camelmailer.Inbound.BypassAsync(55);   // release past the hold
+```
+
+## Logs
+
+Useful when a send did not arrive and the question is whether the request ever
+reached the API.
+
+```csharp
+var requests = await camelmailer.Logs.ListAsync(perPage: 25);
+var tags = await camelmailer.Logs.GetTagsAsync();
 ```
 
 ## Stats, bounces and DMARC

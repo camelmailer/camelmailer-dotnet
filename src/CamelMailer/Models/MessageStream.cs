@@ -30,6 +30,13 @@ public sealed record CreateStreamRequest
 
     /// <summary><c>transactional</c> (default) or <c>broadcast</c>.</summary>
     public string? StreamType { get; init; }
+
+    /// <summary>
+    /// An explicit permalink. The API derives one from the name when this is
+    /// unset, which a caller that has to know the permalink up front cannot
+    /// rely on.
+    /// </summary>
+    public string? Permalink { get; init; }
 }
 
 /// <summary>Fields for updating a message stream. Unset fields are left unchanged.</summary>
@@ -40,4 +47,7 @@ public sealed record UpdateStreamRequest
 
     /// <summary>A new stream type: <c>transactional</c> or <c>broadcast</c>.</summary>
     public string? StreamType { get; init; }
+
+    /// <summary>Archives or unarchives the stream. Archived streams reject new messages.</summary>
+    public bool? Archived { get; init; }
 }
