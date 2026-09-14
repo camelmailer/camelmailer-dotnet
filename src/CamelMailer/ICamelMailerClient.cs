@@ -20,4 +20,19 @@ public interface ICamelMailerClient
 
     /// <summary>Read DMARC compliance summaries and aggregate reports.</summary>
     IDmarcResource Dmarc { get; }
+
+    /// <summary>Plan and send broadcast campaigns.</summary>
+    ICampaignsResource Campaigns { get; }
+
+    /// <summary>Manage the opt-in audience of a broadcast stream.</summary>
+    ISubscribersResource Subscribers { get; }
+
+    /// <summary>Manage the wrappers shared by templates.</summary>
+    ILayoutsResource Layouts { get; }
+
+    /// <summary>Read inbound and held messages.</summary>
+    IInboundResource Inbound { get; }
+
+    /// <summary>Read the server's request log and tag index.</summary>
+    ILogsResource Logs { get; }
 }

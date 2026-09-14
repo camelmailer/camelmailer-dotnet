@@ -73,6 +73,11 @@ public sealed class CamelMailerClient : ICamelMailerClient, IDisposable
         Stats = new StatsResource(connection);
         Bounces = new BouncesResource(connection);
         Dmarc = new DmarcResource(connection);
+        Campaigns = new CampaignsResource(connection);
+        Subscribers = new SubscribersResource(connection);
+        Layouts = new LayoutsResource(connection);
+        Inbound = new InboundResource(connection);
+        Logs = new LogsResource(connection);
     }
 
     /// <inheritdoc />
@@ -92,6 +97,21 @@ public sealed class CamelMailerClient : ICamelMailerClient, IDisposable
 
     /// <inheritdoc />
     public IDmarcResource Dmarc { get; }
+
+    /// <inheritdoc />
+    public ICampaignsResource Campaigns { get; }
+
+    /// <inheritdoc />
+    public ISubscribersResource Subscribers { get; }
+
+    /// <inheritdoc />
+    public ILayoutsResource Layouts { get; }
+
+    /// <inheritdoc />
+    public IInboundResource Inbound { get; }
+
+    /// <inheritdoc />
+    public ILogsResource Logs { get; }
 
     /// <summary>Disposes the internally managed <see cref="HttpClient" />, if any.</summary>
     public void Dispose()

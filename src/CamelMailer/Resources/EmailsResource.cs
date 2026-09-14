@@ -4,23 +4,60 @@ namespace CamelMailer;
 public interface IEmailsResource
 {
     /// <summary>Sends an email. One message is queued per recipient.</summary>
+    /// <param name="request">The message to send.</param>
+    /// <param name="idempotencyKey">
+    /// Makes the send replayable: the same key with the same body returns the
+    /// original result instead of queuing a second copy, and the same key with a
+    /// different body is refused with <c>InvalidIdempotentRequest</c> (HTTP 409).
+    /// Keys are scoped to the server and a completed result is kept for 24 hours.
+    /// </param>
+    /// <param name="cancellationToken">A token to cancel the request.</param>
     Task<SendEmailResponse> SendAsync(
         SendEmailRequest request,
+        string? idempotencyKey = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>Sends many emails in one call. Returns one result per entry; a failed entry does not fail the batch.</summary>
+    /// <param name="requests">The messages to send.</param>
+    /// <param name="idempotencyKey">See <see cref="SendAsync"/>.</param>
+    /// <param name="cancellationToken">A token to cancel the request.</param>
     Task<IReadOnlyList<BatchSendResult>> SendBatchAsync(
         IEnumerable<SendEmailRequest> requests,
+        string? idempotencyKey = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>Sends an email rendered from a stored template.</summary>
+    /// <param name="request">The message to send, with a template set.</param>
+    /// <param name="idempotencyKey">See <see cref="SendAsync"/>.</param>
+    /// <param name="cancellationToken">A token to cancel the request.</param>
     Task<SendEmailResponse> SendWithTemplateAsync(
         SendTemplateEmailRequest request,
+        string? idempotencyKey = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>Sends many template emails in one call. Returns one result per entry.</summary>
+    /// <param name="requests">The messages to send, each with a template set.</param>
+    /// <param name="idempotencyKey">See <see cref="SendAsync"/>.</param>
+    /// <param name="cancellationToken">A token to cancel the request.</param>
     Task<IReadOnlyList<BatchSendResult>> SendWithTemplateBatchAsync(
         IEnumerable<SendTemplateEmailRequest> requests,
+        string? idempotencyKey = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sends the same content to every subscriber of a broadcast stream.
+    /// </summary>
+    /// <remarks>
+    /// The result counts what was queued against what was skipped: recipients
+    /// past the per-request cap of 1000 are skipped rather than queued, so a
+    /// larger audience wants a campaign.
+    /// </remarks>
+    /// <param name="permalink">The broadcast stream permalink.</param>
+    /// <param name="request">The content; give a subject with a body, or a template.</param>
+    /// <param name="cancellationToken">A token to cancel the request.</param>
+    Task<StreamSendResult> SendToStreamAsync(
+        string permalink,
+        SendToStreamRequest request,
         CancellationToken cancellationToken = default);
 
     /// <summary>Fetches a message and its delivery attempts.</summary>
@@ -60,40 +97,62 @@ internal sealed class EmailsResource : IEmailsResource
 
     public Task<SendEmailResponse> SendAsync(
         SendEmailRequest request,
+        string? idempotencyKey = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
-        return _connection.PostAsync<SendEmailResponse>(BasePath, request, cancellationToken);
+        return _connection.PostAsync<SendEmailResponse>(
+            BasePath, request, idempotencyKey, cancellationToken);
+    }
+
+    public Task<StreamSendResult> SendToStreamAsync(
+        string permalink,
+        SendToStreamRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentException.ThrowIfNullOrWhiteSpace(permalink);
+        return _connection.PostAsync<StreamSendResult>(
+            $"/api/v2/server/streams/{Uri.EscapeDataString(permalink)}/send",
+            request,
+            cancellationToken);
     }
 
     public async Task<IReadOnlyList<BatchSendResult>> SendBatchAsync(
         IEnumerable<SendEmailRequest> requests,
+        string? idempotencyKey = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(requests);
         var data = await _connection
-            .PostAsync<BatchData>($"{BasePath}/batch", AsBatchBody(requests), cancellationToken)
+            .PostAsync<BatchData>(
+                $"{BasePath}/batch", AsBatchBody(requests), idempotencyKey, cancellationToken)
             .ConfigureAwait(false);
         return data.Messages;
     }
 
     public Task<SendEmailResponse> SendWithTemplateAsync(
         SendTemplateEmailRequest request,
+        string? idempotencyKey = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
         return _connection.PostAsync<SendEmailResponse>(
-            $"{BasePath}/with_template", request, cancellationToken);
+            $"{BasePath}/with_template", request, idempotencyKey, cancellationToken);
     }
 
     public async Task<IReadOnlyList<BatchSendResult>> SendWithTemplateBatchAsync(
         IEnumerable<SendTemplateEmailRequest> requests,
+        string? idempotencyKey = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(requests);
         var data = await _connection
             .PostAsync<BatchData>(
-                $"{BasePath}/with_template/batch", AsBatchBody(requests), cancellationToken)
+                $"{BasePath}/with_template/batch",
+                AsBatchBody(requests),
+                idempotencyKey,
+                cancellationToken)
             .ConfigureAwait(false);
         return data.Messages;
     }
