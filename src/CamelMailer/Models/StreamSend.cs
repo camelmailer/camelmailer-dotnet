@@ -23,9 +23,6 @@ public sealed record SendToStreamRequest
 
     /// <summary>The values for the template's <c>{{ variables }}</c>.</summary>
     public IReadOnlyDictionary<string, object?>? TemplateModel { get; init; }
-
-    /// <summary>A free-form tag for filtering and stats.</summary>
-    public string? Tag { get; init; }
 }
 
 /// <summary>How a broadcast to a stream was split.</summary>

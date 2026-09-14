@@ -206,7 +206,6 @@ await camelmailer.Subscribers.ListAsync("newsletter");
 await camelmailer.Subscribers.AddAsync("newsletter", new AddSubscriberRequest
 {
     Address = "ada@example.com",
-    Name = "Ada",
 });
 await camelmailer.Subscribers.ImportAsync("newsletter", ["ada@example.com", "grace@example.com"]);
 await camelmailer.Subscribers.ComplaintAsync("newsletter", "ada@example.com");  // suppress + unsubscribe
@@ -233,7 +232,7 @@ await camelmailer.Layouts.DeleteAsync("default");
 
 ```csharp
 var held = await camelmailer.Inbound.ListAsync(new ListInboundOptions { Status = "held" });
-await camelmailer.Inbound.RetryAsync(55);    // back on the delivery queue
+await camelmailer.Inbound.RetryAsync(55);    // back on the delivery queue (.Requeued)
 await camelmailer.Inbound.BypassAsync(55);   // release past the hold
 ```
 

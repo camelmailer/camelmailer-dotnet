@@ -35,6 +35,12 @@ public sealed record ListInboundOptions
 /// <summary>What a retry or bypass did.</summary>
 public sealed record RequeueResult
 {
-    /// <summary>Whether the message went back on the delivery queue.</summary>
-    public bool Queued { get; init; }
+    /// <summary>
+    /// Whether the message went back on the delivery queue. The API names this
+    /// field <c>requeued</c>.
+    /// </summary>
+    public bool Requeued { get; init; }
+
+    /// <summary>The message as it now stands.</summary>
+    public Message? Message { get; init; }
 }

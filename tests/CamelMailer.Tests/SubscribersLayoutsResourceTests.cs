@@ -37,9 +37,12 @@ public class SubscribersLayoutsResourceTests
         using var client = TestClient.Create(handler);
 
         var subscriber = await client.Subscribers.AddAsync(
-            "product-news", new AddSubscriberRequest { Address = "ada@example.com", Name = "Ada" });
+            "product-news",
+            new AddSubscriberRequest { Address = "ada@example.com", Status = "subscribed" });
 
+        // The endpoint takes an address and a status; there is no name field.
         Assert.Contains("\"address\":\"ada@example.com\"", handler.LastRequestBody, StringComparison.Ordinal);
+        Assert.Contains("\"status\":\"subscribed\"", handler.LastRequestBody, StringComparison.Ordinal);
         Assert.Equal("ada@example.com", subscriber.Address);
     }
 

@@ -61,7 +61,7 @@ public class IntegrationTests
         Assert.Equal(permalink, stream.Permalink);
 
         await client.Subscribers.AddAsync(
-            permalink, new AddSubscriberRequest { Address = "ada@example.test", Name = "Ada" });
+            permalink, new AddSubscriberRequest { Address = "ada@example.test" });
         var imported = await client.Subscribers.ImportAsync(
             permalink, ["grace@example.test", "alan@example.test", "grace@example.test", ""]);
         Assert.Equal(2, imported.Added);

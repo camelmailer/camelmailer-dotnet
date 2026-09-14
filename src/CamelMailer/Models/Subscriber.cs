@@ -9,9 +9,6 @@ public sealed record Subscriber
     /// <summary>The email address.</summary>
     public string? Address { get; init; }
 
-    /// <summary>The optional display name.</summary>
-    public string? Name { get; init; }
-
     /// <summary><c>subscribed</c> or <c>unsubscribed</c>.</summary>
     public string? Status { get; init; }
 
@@ -19,14 +16,14 @@ public sealed record Subscriber
     public DateTimeOffset? CreatedAt { get; init; }
 }
 
-/// <summary>Fields for adding or updating a subscriber. Upserts by address.</summary>
+/// <summary>
+/// Fields for adding or updating a subscriber. Upserts by address; the endpoint
+/// takes an address and a status, and there is no name field.
+/// </summary>
 public sealed record AddSubscriberRequest
 {
     /// <summary>The email address.</summary>
     public required string Address { get; init; }
-
-    /// <summary>The optional display name.</summary>
-    public string? Name { get; init; }
 
     /// <summary><c>subscribed</c> (default) or <c>unsubscribed</c>.</summary>
     public string? Status { get; init; }
