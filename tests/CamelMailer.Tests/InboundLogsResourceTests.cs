@@ -33,17 +33,21 @@ public class InboundLogsResourceTests
     {
         var handler = new MockHttpMessageHandler
         {
-            ResponseBody = TestEnvelope.Success("""{"queued":true}"""),
+            // The endpoint answers with "requeued", and carries the message.
+            ResponseBody = TestEnvelope.Success(
+                """{"requeued":true,"message":{"id":55,"status":"Pending"}}"""),
         };
         using var client = TestClient.Create(handler);
 
-        Assert.True((await client.Inbound.RetryAsync(55)).Queued);
+        var retried = await client.Inbound.RetryAsync(55);
+        Assert.True(retried.Requeued);
+        Assert.Equal(55, retried.Message!.Id);
         Assert.EndsWith(
             "/api/v2/server/inbound/55/retry",
             handler.LastRequest!.RequestUri!.ToString(),
             StringComparison.Ordinal);
 
-        Assert.True((await client.Inbound.BypassAsync(55)).Queued);
+        Assert.True((await client.Inbound.BypassAsync(55)).Requeued);
         Assert.EndsWith(
             "/api/v2/server/inbound/55/bypass",
             handler.LastRequest!.RequestUri!.ToString(),
